@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bass Pattern Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -19,15 +19,18 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-dark);
             color: #e0e0e0;
+            /* Prevent scrolling on mobile */
             overflow: hidden;
+            touch-action: none; 
             transition: background-color 0.5s ease;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #666; }
 
         /* Piano Roll Grid */
@@ -129,27 +132,30 @@
         }
     </style>
 </head>
-<body class="flex flex-col h-screen p-4" id="appBody">
+<!-- h-[100dvh] ensures full height on mobile browsers including address bar area -->
+<body class="flex flex-col h-[100dvh] p-2 md:p-4" id="appBody">
 
     <!-- Header & Controls -->
-    <div class="w-full bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl p-4 mb-4 flex-none">
-        <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-            <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                <div class="title-dot w-3 h-3 rounded-full"></div>
+    <!-- Reduced padding and margins for mobile -->
+    <div class="w-full bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl p-3 md:p-4 mb-2 md:mb-4 flex-none">
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-2 md:mb-4">
+            <h1 class="text-lg md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <div class="title-dot w-2 h-2 md:w-3 md:h-3 rounded-full"></div>
                 BASS <span class="title-accent">GEN</span>
             </h1>
             <div class="flex items-center gap-2">
-                 <div class="text-xs font-mono text-neutral-500 border border-neutral-800 px-2 py-1 rounded">
-                    4 BARS / 64 STEPS
+                 <div class="text-[10px] md:text-xs font-mono text-neutral-500 border border-neutral-800 px-2 py-1 rounded">
+                    4 BARS
                 </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-7 gap-3">
+        <!-- Controls Grid: Adjusted gaps and column sizes for mobile -->
+        <div class="grid grid-cols-2 md:grid-cols-7 gap-2 md:gap-3">
             <!-- Genre -->
             <div class="flex flex-col space-y-1">
-                <label class="text-[10px] font-bold text-neutral-500 uppercase">Genre</label>
-                <select id="genreSelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white transition-colors">
+                <label class="text-[9px] md:text-[10px] font-bold text-neutral-500 uppercase">Genre</label>
+                <select id="genreSelect" class="bg-neutral-800 text-white text-[10px] md:text-xs rounded p-1.5 md:p-2 border border-neutral-700 outline-none focus:border-white transition-colors">
                     <option value="techno">Techno</option>
                     <option value="house">House</option>
                     <option value="trance_classic">Classic Trance</option>
@@ -164,8 +170,8 @@
 
             <!-- Key -->
             <div class="flex flex-col space-y-1">
-                <label class="text-[10px] font-bold text-neutral-500 uppercase">Key</label>
-                <select id="keySelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white">
+                <label class="text-[9px] md:text-[10px] font-bold text-neutral-500 uppercase">Key</label>
+                <select id="keySelect" class="bg-neutral-800 text-white text-[10px] md:text-xs rounded p-1.5 md:p-2 border border-neutral-700 outline-none focus:border-white">
                     <option value="C">C</option>
                     <option value="C#">C# / Db</option>
                     <option value="D">D</option>
@@ -183,8 +189,8 @@
 
             <!-- Scale -->
             <div class="flex flex-col space-y-1">
-                <label class="text-[10px] font-bold text-neutral-500 uppercase">Scale</label>
-                <select id="scaleSelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white">
+                <label class="text-[9px] md:text-[10px] font-bold text-neutral-500 uppercase">Scale</label>
+                <select id="scaleSelect" class="bg-neutral-800 text-white text-[10px] md:text-xs rounded p-1.5 md:p-2 border border-neutral-700 outline-none focus:border-white">
                     <option value="minor">Minor</option>
                     <option value="phrygian" selected>Phrygian</option>
                     <option value="harmonic">Harmonic Minor</option>
@@ -195,8 +201,8 @@
 
              <!-- Complexity -->
              <div class="flex flex-col space-y-1">
-                <label class="text-[10px] font-bold text-neutral-500 uppercase">Complexity</label>
-                <select id="complexitySelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white">
+                <label class="text-[9px] md:text-[10px] font-bold text-neutral-500 uppercase">Complexity</label>
+                <select id="complexitySelect" class="bg-neutral-800 text-white text-[10px] md:text-xs rounded p-1.5 md:p-2 border border-neutral-700 outline-none focus:border-white">
                     <option value="simple">Simple</option>
                     <option value="medium" selected>Medium</option>
                     <option value="complex">Complex</option>
@@ -206,8 +212,8 @@
             <!-- BPM -->
             <div class="flex flex-col space-y-1 col-span-2 md:col-span-1">
                 <div class="flex justify-between">
-                    <label class="text-[10px] font-bold text-neutral-500 uppercase">BPM</label>
-                    <span id="bpmValue" class="title-accent text-[10px]">126</span>
+                    <label class="text-[9px] md:text-[10px] font-bold text-neutral-500 uppercase">BPM</label>
+                    <span id="bpmValue" class="title-accent text-[9px] md:text-[10px]">126</span>
                 </div>
                 <input type="range" id="bpmControl" min="60" max="200" step="1" value="126" class="w-full">
             </div>
@@ -215,8 +221,8 @@
             <!-- Volume -->
             <div class="col-span-2 flex flex-col space-y-1 justify-center">
                 <div class="flex justify-between">
-                    <label class="text-[10px] font-bold text-neutral-500 uppercase">Volume</label>
-                    <span id="volValue" class="title-accent text-[10px]">50%</span>
+                    <label class="text-[9px] md:text-[10px] font-bold text-neutral-500 uppercase">Volume</label>
+                    <span id="volValue" class="title-accent text-[9px] md:text-[10px]">50%</span>
                 </div>
                 <input type="range" id="volumeControl" min="0" max="1" step="0.01" value="0.5" class="w-full">
             </div>
@@ -224,8 +230,9 @@
     </div>
 
     <!-- Piano Roll Container (Main Workspace) -->
-    <div class="flex-grow flex overflow-hidden bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-inner relative">
-        <div id="pianoKeys" class="flex-none w-12 bg-[#121212] border-r border-neutral-700 z-10 overflow-hidden relative h-full"></div>
+    <!-- min-h-0 is CRITICAL for flex containers to shrink properly on mobile -->
+    <div class="flex-grow min-h-0 flex overflow-hidden bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-inner relative">
+        <div id="pianoKeys" class="flex-none w-10 md:w-12 bg-[#121212] border-r border-neutral-700 z-10 overflow-hidden relative h-full"></div>
         <div id="gridScrollArea" class="flex-grow overflow-auto relative bg-[#181818]">
             <div id="timelineHeader" class="sticky top-0 h-6 bg-[#252525] border-b border-neutral-700 z-20 flex text-[10px] text-neutral-400 font-mono"></div>
             <div id="pianoRollGrid" class="piano-grid relative"></div>
@@ -233,21 +240,21 @@
     </div>
 
     <!-- Bottom Actions -->
-    <div class="flex-none mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-        <button id="generateBtn" class="btn-primary flex items-center justify-center space-x-2 font-bold py-3 px-4 rounded-lg shadow-lg">
-            <span>⚡ GENERATE</span>
+    <div class="flex-none mt-2 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+        <button id="generateBtn" class="btn-primary flex items-center justify-center space-x-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded-lg shadow-lg text-xs md:text-sm">
+            <span>⚡ GEN</span>
         </button>
         
-        <button id="drumBtn" class="btn-toggle flex items-center justify-center space-x-2 font-bold py-3 px-4 rounded-lg shadow-lg">
-            <span>🥁 DRUMS: OFF</span>
+        <button id="drumBtn" class="btn-toggle flex items-center justify-center space-x-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded-lg shadow-lg text-xs md:text-sm">
+            <span>🥁 DRUMS</span>
         </button>
 
-        <button id="playBtn" class="flex items-center justify-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 px-4 rounded-lg border border-neutral-700 transition-colors">
+        <button id="playBtn" class="flex items-center justify-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-2 md:py-3 px-2 md:px-4 rounded-lg border border-neutral-700 transition-colors text-xs md:text-sm">
             <span id="playText">▶ PLAY</span>
         </button>
 
-        <button id="midiBtn" class="flex items-center justify-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium py-3 px-4 rounded-lg border border-neutral-700 transition-colors">
-            <span>💾 EXPORT MIDI</span>
+        <button id="midiBtn" class="flex items-center justify-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium py-2 md:py-3 px-2 md:px-4 rounded-lg border border-neutral-700 transition-colors text-xs md:text-sm">
+            <span>💾 MIDI</span>
         </button>
     </div>
 
@@ -381,8 +388,10 @@
                 if (isBlackRow) cell.style.backgroundColor = 'rgba(0,0,0,0.2)';
                 
                 // --- Mouse Event Handlers for Drag Drawing ---
+                // Touch support for mobile
                 cell.addEventListener('mousedown', (e) => handleMouseDown(e, step, midiNote));
                 cell.addEventListener('mouseenter', (e) => handleMouseEnter(e, step, midiNote));
+                // We'll keep mouse events primarily, browser usually maps touch to mouse click for basic interaction
                 
                 pianoRollGrid.appendChild(cell);
             }
@@ -390,6 +399,7 @@
         
         // Global Mouse Up to stop drawing
         document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('touchend', handleMouseUp); // Safety for mobile drag
         
         timelineHeader.innerHTML = '';
         for(let i=1; i<=NUM_BARS; i++) {
@@ -402,8 +412,6 @@
         gridScrollArea.addEventListener('scroll', () => { pianoKeys.scrollTop = gridScrollArea.scrollTop; });
         
         // --- Fix for Scroll Misalignment ---
-        // Right side (grid) might have a horizontal scrollbar, making its client height smaller.
-        // We need to add padding to the bottom of the left side (keys) to match the scroll height.
         const adjustScrollOffset = () => {
             const scrollBarHeight = gridScrollArea.offsetHeight - gridScrollArea.clientHeight;
             if (scrollBarHeight > 0) {
@@ -413,7 +421,6 @@
             }
         };
         
-        // Use ResizeObserver to detect when scrollbars appear/disappear
         const resizeObserver = new ResizeObserver(adjustScrollOffset);
         resizeObserver.observe(gridScrollArea);
         window.addEventListener('resize', adjustScrollOffset);
@@ -443,10 +450,10 @@
             isDrumsEnabled = !isDrumsEnabled;
             if(isDrumsEnabled) {
                 drumBtn.classList.add('active');
-                drumBtn.innerText = "🥁 DRUMS: ON";
+                drumBtn.querySelector('span').innerText = "🥁 DRUMS: ON";
             } else {
                 drumBtn.classList.remove('active');
-                drumBtn.innerText = "🥁 DRUMS: OFF";
+                drumBtn.querySelector('span').innerText = "🥁 DRUMS: OFF";
             }
         });
     }
