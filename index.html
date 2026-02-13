@@ -132,16 +132,14 @@
         }
     </style>
 </head>
-<!-- h-[100dvh] ensures full height on mobile browsers including address bar area -->
 <body class="flex flex-col h-[100dvh] p-2 md:p-4" id="appBody">
 
     <!-- Header & Controls -->
-    <!-- Reduced padding and margins for mobile -->
     <div class="w-full bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl p-3 md:p-4 mb-2 md:mb-4 flex-none">
         <div class="flex flex-wrap justify-between items-center gap-2 mb-2 md:mb-4">
             <h1 class="text-lg md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
                 <div class="title-dot w-2 h-2 md:w-3 md:h-3 rounded-full"></div>
-                BASS <span class="title-accent">GEN</span>
+                BASS <span class="title-accent">DRAGON</span> GEN
             </h1>
             <div class="flex items-center gap-2">
                  <div class="text-[10px] md:text-xs font-mono text-neutral-500 border border-neutral-800 px-2 py-1 rounded">
@@ -150,7 +148,6 @@
             </div>
         </div>
 
-        <!-- Controls Grid: Adjusted gaps and column sizes for mobile -->
         <div class="grid grid-cols-2 md:grid-cols-7 gap-2 md:gap-3">
             <!-- Genre -->
             <div class="flex flex-col space-y-1">
@@ -229,8 +226,7 @@
         </div>
     </div>
 
-    <!-- Piano Roll Container (Main Workspace) -->
-    <!-- min-h-0 is CRITICAL for flex containers to shrink properly on mobile -->
+    <!-- Piano Roll Container -->
     <div class="flex-grow min-h-0 flex overflow-hidden bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-inner relative">
         <div id="pianoKeys" class="flex-none w-10 md:w-12 bg-[#121212] border-r border-neutral-700 z-10 overflow-hidden relative h-full"></div>
         <div id="gridScrollArea" class="flex-grow overflow-auto relative bg-[#181818]">
@@ -242,7 +238,7 @@
     <!-- Bottom Actions -->
     <div class="flex-none mt-2 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         <button id="generateBtn" class="btn-primary flex items-center justify-center space-x-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded-lg shadow-lg text-xs md:text-sm">
-            <span>⚡ GEN</span>
+            <span>⚡ GENERATE BASS</span>
         </button>
         
         <button id="drumBtn" class="btn-toggle flex items-center justify-center space-x-2 font-bold py-2 md:py-3 px-2 md:px-4 rounded-lg shadow-lg text-xs md:text-sm">
@@ -265,8 +261,6 @@
     const TOTAL_STEPS = STEPS_PER_BAR * NUM_BARS;
     
     // Note Range
-    const START_NOTE = 36; 
-    const END_NOTE = 60;   
     const MIN_MIDI = 24;
     const MAX_MIDI = 52; 
     const ROW_COUNT = MAX_MIDI - MIN_MIDI + 1; 
@@ -387,19 +381,15 @@
                 if ((step + 1) % 16 === 0) cell.classList.add('bar-separator');
                 if (isBlackRow) cell.style.backgroundColor = 'rgba(0,0,0,0.2)';
                 
-                // --- Mouse Event Handlers for Drag Drawing ---
-                // Touch support for mobile
                 cell.addEventListener('mousedown', (e) => handleMouseDown(e, step, midiNote));
                 cell.addEventListener('mouseenter', (e) => handleMouseEnter(e, step, midiNote));
-                // We'll keep mouse events primarily, browser usually maps touch to mouse click for basic interaction
                 
                 pianoRollGrid.appendChild(cell);
             }
         }
         
-        // Global Mouse Up to stop drawing
         document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('touchend', handleMouseUp); // Safety for mobile drag
+        document.addEventListener('touchend', handleMouseUp);
         
         timelineHeader.innerHTML = '';
         for(let i=1; i<=NUM_BARS; i++) {
@@ -411,7 +401,6 @@
 
         gridScrollArea.addEventListener('scroll', () => { pianoKeys.scrollTop = gridScrollArea.scrollTop; });
         
-        // --- Fix for Scroll Misalignment ---
         const adjustScrollOffset = () => {
             const scrollBarHeight = gridScrollArea.offsetHeight - gridScrollArea.clientHeight;
             if (scrollBarHeight > 0) {
@@ -503,8 +492,6 @@
         }
     }
 
-    // --- Interaction Logic (Drag to Edit) ---
-
     function handleMouseDown(e, step, midi) {
         const el = document.getElementById(`cell-${step}-${midi}`);
         let existingNoteKey = null;
@@ -562,7 +549,7 @@
         renderGrid();
     }
 
-    // --- GENERATOR HUB ---
+    // --- GENERATOR ---
     function generatePattern() {
         clearGrid();
         
@@ -605,15 +592,13 @@
         renderGrid();
     }
 
-    // --- GENRE ALGORITHMS (UPDATED FOR DURATION) ---
+    // --- GENRE ALGORITHMS ---
 
-    // 1. Techno: Mostly short
     function generateTechnoMotif(root, intervals, complexity) {
         let pattern = [];
         const density = complexity === 'simple' ? 0.3 : 0.6;
         for (let i = 0; i < 16; i++) {
             let hit = false;
-            let note = root;
             if (i % 4 === 0) hit = Math.random() > 0.7; 
             else if (i % 4 === 2) hit = Math.random() < (density + 0.2); 
             else hit = Math.random() < (density - 0.1); 
@@ -622,7 +607,6 @@
         return pattern;
     }
 
-    // 2. House: Short funky stabs
     function generateHouseMotif(root, intervals, complexity) {
         let pattern = [];
         const density = complexity === 'simple' ? 0.4 : 0.6;
@@ -632,7 +616,6 @@
             if(i % 4 === 2) hit = Math.random() < 0.8; 
             else if(i % 4 === 0) hit = Math.random() < 0.2; 
             else hit = Math.random() < (density * 0.5); 
-
             if(hit) {
                 if(Math.random() > 0.7) note += intervals[1];
                 pattern.push({stepOffset: i, midi: note, duration: 1});
@@ -641,7 +624,6 @@
         return pattern;
     }
 
-    // 3. Psytrance: Very short
     function generatePsytranceMotif(root, intervals) {
         let pattern = [];
         for(let i=0; i<16; i++) {
@@ -652,7 +634,6 @@
         return pattern;
     }
 
-    // 4. Classic Trance: 
     function generateClassicTranceMotif(root, intervals) {
         let pattern = [];
         for(let i=0; i<16; i++) {
@@ -664,39 +645,28 @@
         return pattern;
     }
 
-    // 5. EDM: 
     function generateEDMMotif(root, intervals, complexity) {
         let pattern = [];
         if(Math.random() > 0.5) {
-            pattern.push({stepOffset: 0, midi: root, duration: 1});
-            pattern.push({stepOffset: 4, midi: root, duration: 1});
-            pattern.push({stepOffset: 8, midi: root, duration: 1});
-            pattern.push({stepOffset: 12, midi: root, duration: 1});
+            [0,4,8,12].forEach(s => pattern.push({stepOffset: s, midi: root, duration: 1}));
         } else {
-            pattern.push({stepOffset: 2, midi: root, duration: 1});
-            pattern.push({stepOffset: 6, midi: root, duration: 1});
-            pattern.push({stepOffset: 10, midi: root, duration: 1});
-            pattern.push({stepOffset: 14, midi: root, duration: 1});
+            [2,6,10,14].forEach(s => pattern.push({stepOffset: s, midi: root, duration: 1}));
         }
         return pattern;
     }
 
-    // 6. DnB: LONG REESE BASS
     function generateDnBMotif(root, intervals, complexity) {
         let pattern = [];
         pattern.push({stepOffset: 0, midi: root, duration: 6});
-        
         if(Math.random() > 0.5) pattern.push({stepOffset: 7, midi: root + 12, duration: 2}); 
         if(Math.random() > 0.5) pattern.push({stepOffset: 10, midi: root, duration: 2});
         else pattern.push({stepOffset: 12, midi: root, duration: 4}); 
         return pattern;
     }
 
-    // 7. Dubstep: WOBBLES
     function generateDubstepMotif(root, intervals, complexity) {
         let pattern = [];
         pattern.push({stepOffset: 0, midi: root, duration: 8}); 
-        
         if(Math.random() > 0.5) {
              pattern.push({stepOffset: 8, midi: root, duration: 4});
              pattern.push({stepOffset: 12, midi: root, duration: 4});
@@ -710,11 +680,9 @@
         return pattern;
     }
 
-    // 8. HipHop: 808 Sustain
     function generateHipHopMotif(root, intervals, complexity) {
         let pattern = [];
         pattern.push({stepOffset: 0, midi: root, duration: 6});
-        
         if(Math.random() > 0.3) {
             let sync = [10, 11, 14][Math.floor(Math.random()*3)];
             pattern.push({stepOffset: sync, midi: root, duration: 2});
@@ -722,13 +690,9 @@
         return pattern;
     }
 
-    // 9. Future Bass: Chords 
     function generateFutureBassMotif(root, intervals, complexity) {
         let pattern = [];
-        pattern.push({stepOffset: 0, midi: root, duration: 3});
-        pattern.push({stepOffset: 3, midi: root, duration: 3});
-        pattern.push({stepOffset: 6, midi: root, duration: 3});
-        
+        [0, 3, 6].forEach(s => pattern.push({stepOffset: s, midi: root, duration: 3}));
         if(Math.random() > 0.5) pattern.push({stepOffset: 12, midi: root, duration: 4});
         return pattern;
     }
@@ -751,10 +715,8 @@
         motif.forEach(note => {
             const actualStep = startStep + note.stepOffset;
             if (actualStep >= TOTAL_STEPS) return;
-            
             let dur = note.duration || 1;
             if (actualStep + dur > TOTAL_STEPS) dur = TOTAL_STEPS - actualStep;
-
             const key = `${actualStep}_${note.midi}`;
             activeNotes[key] = { velocity: 100 + Math.floor(Math.random() * 27), duration: dur }; 
         });
@@ -776,13 +738,11 @@
         return map[name] || map['minor'];
     }
 
-    // --- Audio Engine (Drum Synthesis) ---
-    
-    // Create noise buffer for snare/hats
+    // --- Audio Engine ---
     let noiseBuffer = null;
     function initNoiseBuffer() {
         if(!audioCtx) return;
-        const bufferSize = audioCtx.sampleRate * 2; // 2 seconds
+        const bufferSize = audioCtx.sampleRate * 2;
         noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
@@ -794,10 +754,7 @@
         if(!isDrumsEnabled) return;
         const pattern = DRUM_PATTERNS[currentGenre];
         if(!pattern) return;
-        
-        // Loop position inside the 16 step pattern
         const localStep = step % 16;
-        
         if(pattern.k[localStep]) playKick(time);
         if(pattern.s[localStep]) playSnare(time);
         if(pattern.h[localStep]) playHiHat(time, false);
@@ -818,32 +775,19 @@
     }
 
     function playSnare(time) {
-        // Noise
         const node = audioCtx.createBufferSource();
         node.buffer = noiseBuffer;
         const gain = audioCtx.createGain();
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'highpass';
         filter.frequency.value = 1000;
-        gain.gain.setValueAtTime(0.4, time); // Volume factor
+        gain.gain.setValueAtTime(0.4, time);
         gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
         node.connect(filter);
         filter.connect(gain);
         gain.connect(audioCtx.destination);
         node.start(time);
         node.stop(time + 0.2);
-        
-        // Body (Osc)
-        const osc = audioCtx.createOscillator();
-        const oscGain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(250, time);
-        oscGain.gain.setValueAtTime(0.3, time);
-        oscGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
-        osc.connect(oscGain);
-        oscGain.connect(audioCtx.destination);
-        osc.start(time);
-        osc.stop(time + 0.1);
     }
 
     function playHiHat(time, isOpen) {
@@ -853,13 +797,10 @@
         const filter = audioCtx.createBiquadFilter();
         filter.type = 'highpass';
         filter.frequency.value = 7000;
-        
         const decay = isOpen ? 0.4 : 0.05;
         const vol = isOpen ? 0.3 : 0.2;
-
         gain.gain.setValueAtTime(vol, time);
         gain.gain.exponentialRampToValueAtTime(0.01, time + decay);
-        
         node.connect(filter);
         filter.connect(gain);
         gain.connect(audioCtx.destination);
@@ -867,7 +808,6 @@
         node.stop(time + decay);
     }
 
-    // --- Audio Engine (Synth) ---
     function playPreviewNote(midi) {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -881,37 +821,28 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         const filter = audioCtx.createBiquadFilter();
-
         const freq = 440 * Math.pow(2, (midi - 69) / 12);
         osc.type = 'sawtooth';
         osc.frequency.value = freq;
-
         filter.type = 'lowpass';
         filter.Q.value = 5;
-        
         let decay = durationSec * 0.8; 
         if(currentGenre === 'psytrance') decay = 0.1;
-
         filter.frequency.setValueAtTime(freq * 1.5, time);
         filter.frequency.exponentialRampToValueAtTime(freq, time + decay); 
-
         const vol = parseFloat(volumeControl.value) * (velocity / 127);
         gain.gain.setValueAtTime(0.001, time);
         gain.gain.linearRampToValueAtTime(vol, time + 0.01);
-        
-        // Sustain
         gain.gain.setValueAtTime(vol, time + durationSec - 0.05);
         gain.gain.exponentialRampToValueAtTime(0.001, time + durationSec);
-
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(audioCtx.destination);
-
         osc.start(time);
         osc.stop(time + durationSec + 0.1);
     }
 
-    // --- Scheduler & Playback ---
+    // --- Playback ---
     function scheduler() {
         while (nextNoteTime < audioCtx.currentTime + 0.1) {
             scheduleStep(currentStep, nextNoteTime);
@@ -923,11 +854,7 @@
     function scheduleStep(step, time) {
         const secondsPerBeat = 60.0 / bpm;
         const secondsPer16th = secondsPerBeat / 4;
-
-        // Drums
         playDrumStep(step, time);
-
-        // Visuals
         requestAnimationFrame(() => {
             const prevStep = step === 0 ? TOTAL_STEPS - 1 : step - 1;
             document.querySelectorAll(`[id^='cell-${prevStep}-']`).forEach(c => c.style.borderRightColor = '');
@@ -952,29 +879,22 @@
             }
         });
 
-        // Bass Synth
         for(const key in activeNotes) {
             const [sStr, mStr] = key.split('_');
-            const noteStartStep = parseInt(sStr);
-            const midi = parseInt(mStr);
-            
-            if (noteStartStep === step) {
+            if (parseInt(sStr) === step) {
                 const note = activeNotes[key];
-                const durSteps = note.duration || 1;
-                const durSec = durSteps * secondsPer16th;
-                playSound(time, midi, note.velocity, durSec); 
+                playSound(time, parseInt(mStr), note.velocity, (note.duration || 1) * secondsPer16th); 
             }
         }
     }
 
     function advanceStep() {
-        const secondsPerBeat = 60.0 / bpm;
-        nextNoteTime += 0.25 * secondsPerBeat; 
+        nextNoteTime += 0.25 * (60.0 / bpm); 
         currentStep++;
         if (currentStep === TOTAL_STEPS) currentStep = 0;
     }
 
-    // --- Handlers ---
+    // --- Event Handlers ---
     document.getElementById('playBtn').addEventListener('click', () => {
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -997,36 +917,28 @@
     generateBtn.addEventListener('click', generatePattern);
 
     document.getElementById('midiBtn').addEventListener('click', () => {
-        if (Object.keys(activeNotes).length === 0) return alert("No pattern to export!");
+        if (Object.keys(activeNotes).length === 0) return;
         let events = [];
         const ticksPer16th = 24; 
-        
         for(const key in activeNotes) {
             const [sStr, mStr] = key.split('_');
             const step = parseInt(sStr);
             const midi = parseInt(mStr);
             const note = activeNotes[key];
             const dur = note.duration || 1;
-
             events.push({ type: 'on', midi: midi, velocity: note.velocity, tick: step * ticksPer16th });
             events.push({ type: 'off', midi: midi, velocity: 0, tick: (step + dur) * ticksPer16th - 2 }); 
         }
-        
         events.sort((a, b) => a.tick - b.tick);
-        
         let trackEvents = [];
         let lastTick = 0;
         events.forEach(e => {
             let delta = e.tick - lastTick;
-            if(delta < 0) delta = 0;
-            writeVarLen(trackEvents, delta);
-            if (e.type === 'on') trackEvents.push(0x90, e.midi, e.velocity);
-            else trackEvents.push(0x80, e.midi, 0);
+            writeVarLen(trackEvents, delta < 0 ? 0 : delta);
+            trackEvents.push(e.type === 'on' ? 0x90 : 0x80, e.midi, e.velocity);
             lastTick = e.tick;
         });
-        writeVarLen(trackEvents, 0);
-        trackEvents.push(0xFF, 0x2F, 0x00);
-        
+        trackEvents.push(0x00, 0xFF, 0x2F, 0x00);
         const header = [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96];
         const trkHead = [0x4D, 0x54, 0x72, 0x6B, (trackEvents.length >> 24) & 0xFF, (trackEvents.length >> 16) & 0xFF, (trackEvents.length >> 8) & 0xFF, trackEvents.length & 0xFF];
         const blob = new Blob([new Uint8Array([...header, ...trkHead, ...trackEvents])], { type: 'audio/midi' });
@@ -1044,7 +956,6 @@
 
     initUI();
     window.addEventListener('load', generatePattern);
-
 </script>
 </body>
 </html>
