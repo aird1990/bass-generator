@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bass Pattern Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        
+        :root {
+            --accent-color: #ff0055;
+            --accent-glow: rgba(255, 0, 85, 0.5);
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            overflow: hidden;
+            transition: background-color 0.5s ease;
+            user-select: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #666; }
+
+        /* Piano Roll Grid */
+        .piano-grid { position: relative; }
+        .bar-separator { border-right: 2px solid #666; }
+
+        /* Note Styling */
+        .note-cell {
+            transition: background-color 0.05s ease; 
+            position: relative;
+        }
+        .note-cell:hover { background-color: rgba(255, 255, 255, 0.1); }
+        
+        /* Note Heads & Tails */
+        .note-cell.note-head {
+            background-color: var(--accent-color);
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 0 8px var(--accent-glow);
+            z-index: 10;
+            border-radius: 4px;
+        }
+        
+        /* Long Note Styling */
+        .note-cell.note-long-start {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+            margin-right: -1px; 
+        }
+        .note-cell.note-long-mid {
+            background-color: var(--accent-color);
+            opacity: 0.8;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            border-left: none;
+            border-right: none;
+            border-radius: 0;
+            z-index: 5;
+            margin-left: -1px;
+            margin-right: -1px;
+        }
+        .note-cell.note-long-end {
+            background-color: var(--accent-color);
+            opacity: 0.8;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-left: none;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            border-radius: 0 4px 4px 0;
+            z-index: 5;
+            margin-left: -1px;
+        }
+
+        /* UI Elements Dynamic Coloring */
+        .title-accent { color: var(--accent-color); transition: color 0.3s; }
+        .title-dot { background-color: var(--accent-color); transition: background-color 0.3s; }
+        
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            transition: background-color 0.3s, transform 0.1s, filter 0.3s;
+        }
+        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-toggle {
+            background-color: #333;
+            color: #888;
+            border: 1px solid #444;
+            transition: all 0.2s;
+        }
+        .btn-toggle.active {
+            background-color: var(--accent-color);
+            color: #fff;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            background: var(--accent-color);
+            box-shadow: 0 0 5px var(--accent-glow);
+            transition: background 0.3s;
+        }
+
+        .key-black { background-color: #000; color: #555; }
+        .key-white { background-color: #e0e0e0; color: #333; }
+
+        .playhead-column { background-color: rgba(255, 255, 255, 0.1) !important; }
+        .playing-note { filter: brightness(1.8) contrast(1.2); }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            cursor: pointer; margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: #333; border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen p-4" id="appBody">
+
+    <!-- Header & Controls -->
+    <div class="w-full bg-neutral-900 border border-neutral-800 rounded-xl shadow-xl p-4 mb-4 flex-none">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+            <h1 class="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <div class="title-dot w-3 h-3 rounded-full"></div>
+                BASS <span class="title-accent">GEN</span>
+            </h1>
+            <div class="flex items-center gap-2">
+                 <div class="text-xs font-mono text-neutral-500 border border-neutral-800 px-2 py-1 rounded">
+                    4 BARS / 64 STEPS
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-7 gap-3">
+            <!-- Genre -->
+            <div class="flex flex-col space-y-1">
+                <label class="text-[10px] font-bold text-neutral-500 uppercase">Genre</label>
+                <select id="genreSelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white transition-colors">
+                    <option value="techno">Techno</option>
+                    <option value="house">House</option>
+                    <option value="trance_classic">Classic Trance</option>
+                    <option value="psytrance">Psytrance</option>
+                    <option value="edm">EDM (Big Room)</option>
+                    <option value="dnb">Drum'n'Bass</option>
+                    <option value="dubstep">Dubstep</option>
+                    <option value="futurebass">Future Bass</option>
+                    <option value="hiphop">Hip Hop</option>
+                </select>
+            </div>
+
+            <!-- Key -->
+            <div class="flex flex-col space-y-1">
+                <label class="text-[10px] font-bold text-neutral-500 uppercase">Key</label>
+                <select id="keySelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white">
+                    <option value="C">C</option>
+                    <option value="C#">C# / Db</option>
+                    <option value="D">D</option>
+                    <option value="D#">D# / Eb</option>
+                    <option value="E">E</option>
+                    <option value="F" selected>F</option>
+                    <option value="F#">F# / Gb</option>
+                    <option value="G">G</option>
+                    <option value="G#">G# / Ab</option>
+                    <option value="A">A</option>
+                    <option value="A#">A# / Bb</option>
+                    <option value="B">B</option>
+                </select>
+            </div>
+
+            <!-- Scale -->
+            <div class="flex flex-col space-y-1">
+                <label class="text-[10px] font-bold text-neutral-500 uppercase">Scale</label>
+                <select id="scaleSelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white">
+                    <option value="minor">Minor</option>
+                    <option value="phrygian" selected>Phrygian</option>
+                    <option value="harmonic">Harmonic Minor</option>
+                    <option value="dorian">Dorian</option>
+                    <option value="major">Major</option>
+                </select>
+            </div>
+
+             <!-- Complexity -->
+             <div class="flex flex-col space-y-1">
+                <label class="text-[10px] font-bold text-neutral-500 uppercase">Complexity</label>
+                <select id="complexitySelect" class="bg-neutral-800 text-white text-xs rounded p-2 border border-neutral-700 outline-none focus:border-white">
+                    <option value="simple">Simple</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="complex">Complex</option>
+                </select>
+            </div>
+
+            <!-- BPM -->
+            <div class="flex flex-col space-y-1 col-span-2 md:col-span-1">
+                <div class="flex justify-between">
+                    <label class="text-[10px] font-bold text-neutral-500 uppercase">BPM</label>
+                    <span id="bpmValue" class="title-accent text-[10px]">126</span>
+                </div>
+                <input type="range" id="bpmControl" min="60" max="200" step="1" value="126" class="w-full">
+            </div>
+
+            <!-- Volume -->
+            <div class="col-span-2 flex flex-col space-y-1 justify-center">
+                <div class="flex justify-between">
+                    <label class="text-[10px] font-bold text-neutral-500 uppercase">Volume</label>
+                    <span id="volValue" class="title-accent text-[10px]">50%</span>
+                </div>
+                <input type="range" id="volumeControl" min="0" max="1" step="0.01" value="0.5" class="w-full">
+            </div>
+        </div>
+    </div>
+
+    <!-- Piano Roll Container (Main Workspace) -->
+    <div class="flex-grow flex overflow-hidden bg-[#1e1e1e] border border-neutral-800 rounded-xl shadow-inner relative">
+        <div id="pianoKeys" class="flex-none w-12 bg-[#121212] border-r border-neutral-700 z-10 overflow-hidden relative h-full"></div>
+        <div id="gridScrollArea" class="flex-grow overflow-auto relative bg-[#181818]">
+            <div id="timelineHeader" class="sticky top-0 h-6 bg-[#252525] border-b border-neutral-700 z-20 flex text-[10px] text-neutral-400 font-mono"></div>
+            <div id="pianoRollGrid" class="piano-grid relative"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="flex-none mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <button id="generateBtn" class="btn-primary flex items-center justify-center space-x-2 font-bold py-3 px-4 rounded-lg shadow-lg">
+            <span>⚡ GENERATE</span>
+        </button>
+        
+        <button id="drumBtn" class="btn-toggle flex items-center justify-center space-x-2 font-bold py-3 px-4 rounded-lg shadow-lg">
+            <span>🥁 DRUMS: OFF</span>
+        </button>
+
+        <button id="playBtn" class="flex items-center justify-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 px-4 rounded-lg border border-neutral-700 transition-colors">
+            <span id="playText">▶ PLAY</span>
+        </button>
+
+        <button id="midiBtn" class="flex items-center justify-center space-x-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-medium py-3 px-4 rounded-lg border border-neutral-700 transition-colors">
+            <span>💾 EXPORT MIDI</span>
+        </button>
+    </div>
+
+<script>
+    // --- Configuration ---
+    const STEPS_PER_BAR = 16;
+    const NUM_BARS = 4;
+    const TOTAL_STEPS = STEPS_PER_BAR * NUM_BARS;
+    
+    // Note Range
+    const START_NOTE = 36; 
+    const END_NOTE = 60;   
+    const MIN_MIDI = 24;
+    const MAX_MIDI = 52; 
+    const ROW_COUNT = MAX_MIDI - MIN_MIDI + 1; 
+    const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+    const genreSettings = {
+        'techno': { color: '#ff0055', bpm: 126 },
+        'house': { color: '#ff9d00', bpm: 124 },
+        'trance_classic': { color: '#0088ff', bpm: 138 },
+        'psytrance': { color: '#aa00ff', bpm: 142 },
+        'edm': { color: '#ffffff', bpm: 128 },
+        'dnb': { color: '#00e5ff', bpm: 174 },
+        'dubstep': { color: '#8800ff', bpm: 140 },
+        'futurebass': { color: '#ff00cc', bpm: 150 },
+        'hiphop': { color: '#ffd700', bpm: 90 }
+    };
+    
+    // --- Drum Patterns ---
+    const DRUM_PATTERNS = {
+        'techno': { k: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], s: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], h: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], o: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+        'house': { k: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], s: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], h: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], o: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+        'trance_classic': { k: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], s: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], h: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], o: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+        'psytrance': { k: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], s: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], h: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], o: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+        'edm': { k: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0], s: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], h: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0], o: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },
+        'dnb': { k: [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0], s: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], h: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], o: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },
+        'dubstep': { k: [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], s: [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], h: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], o: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] },
+        'futurebass': { k: [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0], s: [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0], h: [1,1,1,1, 1,1,1,1, 1,1,1,0, 1,1,1,1], o: [0,0,0,0, 0,0,0,0, 0,0,0,1, 0,0,0,0] },
+        'hiphop': { k: [1,0,0,0, 0,0,0,0, 0,0,1,0, 0,1,0,0], s: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0], h: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0], o: [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0] }
+    };
+
+    // --- State ---
+    let activeNotes = {}; 
+    let isPlaying = false;
+    let isDrumsEnabled = false;
+    let currentStep = 0;
+    let audioCtx;
+    let nextNoteTime = 0;
+    let timerID;
+    let bpm = 126;
+    let currentGenre = 'techno';
+    
+    // Drag Drawing State
+    let isDrawing = false;
+    let drawStartStep = null;
+    let drawMidi = null;
+
+    // --- DOM Elements ---
+    const appBody = document.getElementById('appBody');
+    const pianoKeys = document.getElementById('pianoKeys');
+    const pianoRollGrid = document.getElementById('pianoRollGrid');
+    const gridScrollArea = document.getElementById('gridScrollArea');
+    const timelineHeader = document.getElementById('timelineHeader');
+    const volumeControl = document.getElementById('volumeControl');
+    const volValue = document.getElementById('volValue');
+    const bpmControl = document.getElementById('bpmControl');
+    const bpmValue = document.getElementById('bpmValue');
+    const genreSelect = document.getElementById('genreSelect');
+    const generateBtn = document.getElementById('generateBtn');
+    const drumBtn = document.getElementById('drumBtn');
+
+    // --- Initialization ---
+    function initUI() {
+        updateTheme(currentGenre);
+
+        const rowHeight = 24; 
+        const cellWidth = 30; 
+        
+        const totalWidth = TOTAL_STEPS * cellWidth;
+        pianoRollGrid.style.height = `${ROW_COUNT * rowHeight}px`;
+        pianoRollGrid.style.width = `${totalWidth}px`;
+        timelineHeader.style.width = `${totalWidth}px`;
+        
+        pianoKeys.innerHTML = '';
+        const keyHeader = document.createElement('div');
+        keyHeader.style.height = '24px';
+        keyHeader.className = 'sticky top-0 bg-[#121212] border-b border-neutral-700 z-30';
+        pianoKeys.appendChild(keyHeader);
+
+        for (let i = MAX_MIDI; i >= MIN_MIDI; i--) {
+            const noteName = NOTE_NAMES[i % 12];
+            const isBlack = noteName.includes('#');
+            const keyDiv = document.createElement('div');
+            
+            keyDiv.style.height = `${rowHeight}px`;
+            keyDiv.className = `flex items-center justify-end pr-1 text-[9px] border-b border-neutral-800 cursor-pointer hover:opacity-80 transition-colors ${isBlack ? 'key-black' : 'key-white'}`;
+            if (i % 12 === 0) {
+                keyDiv.innerText = `C${Math.floor(i/12) - 1}`;
+                keyDiv.style.color = '#fff';
+            }
+            
+            keyDiv.addEventListener('mousedown', () => {
+                playPreviewNote(i);
+                const settings = genreSettings[currentGenre];
+                const originalBg = isBlack ? '#000' : '#e0e0e0';
+                keyDiv.style.backgroundColor = settings.color;
+                keyDiv.style.color = (currentGenre === 'edm' || currentGenre === 'hiphop') ? '#000' : '#fff';
+                setTimeout(() => {
+                    keyDiv.style.backgroundColor = originalBg;
+                    keyDiv.style.color = isBlack ? '#555' : '#333';
+                    if (i % 12 === 0) keyDiv.style.color = '#fff'; 
+                }, 200);
+            });
+            pianoKeys.appendChild(keyDiv);
+        }
+
+        pianoRollGrid.innerHTML = '';
+        pianoRollGrid.style.display = 'grid';
+        pianoRollGrid.style.gridTemplateColumns = `repeat(${TOTAL_STEPS}, ${cellWidth}px)`;
+        pianoRollGrid.style.gridTemplateRows = `repeat(${ROW_COUNT}, ${rowHeight}px)`;
+
+        for (let row = 0; row < ROW_COUNT; row++) {
+            const midiNote = MAX_MIDI - row;
+            const isBlackRow = NOTE_NAMES[midiNote % 12].includes('#');
+            for (let step = 0; step < TOTAL_STEPS; step++) {
+                const cell = document.createElement('div');
+                cell.id = `cell-${step}-${midiNote}`;
+                cell.className = `note-cell border-b border-neutral-800 border-r border-neutral-800/50`;
+                if ((step + 1) % 16 === 0) cell.classList.add('bar-separator');
+                if (isBlackRow) cell.style.backgroundColor = 'rgba(0,0,0,0.2)';
+                
+                // --- Mouse Event Handlers for Drag Drawing ---
+                cell.addEventListener('mousedown', (e) => handleMouseDown(e, step, midiNote));
+                cell.addEventListener('mouseenter', (e) => handleMouseEnter(e, step, midiNote));
+                
+                pianoRollGrid.appendChild(cell);
+            }
+        }
+        
+        // Global Mouse Up to stop drawing
+        document.addEventListener('mouseup', handleMouseUp);
+        
+        timelineHeader.innerHTML = '';
+        for(let i=1; i<=NUM_BARS; i++) {
+            const barDiv = document.createElement('div');
+            barDiv.className = 'flex-1 border-r border-neutral-700 pl-1 pt-1';
+            barDiv.innerText = `BAR ${i}`;
+            timelineHeader.appendChild(barDiv);
+        }
+
+        gridScrollArea.addEventListener('scroll', () => { pianoKeys.scrollTop = gridScrollArea.scrollTop; });
+        
+        // --- Fix for Scroll Misalignment ---
+        // Right side (grid) might have a horizontal scrollbar, making its client height smaller.
+        // We need to add padding to the bottom of the left side (keys) to match the scroll height.
+        const adjustScrollOffset = () => {
+            const scrollBarHeight = gridScrollArea.offsetHeight - gridScrollArea.clientHeight;
+            if (scrollBarHeight > 0) {
+                pianoKeys.style.paddingBottom = `${scrollBarHeight}px`;
+            } else {
+                pianoKeys.style.paddingBottom = '0px';
+            }
+        };
+        
+        // Use ResizeObserver to detect when scrollbars appear/disappear
+        const resizeObserver = new ResizeObserver(adjustScrollOffset);
+        resizeObserver.observe(gridScrollArea);
+        window.addEventListener('resize', adjustScrollOffset);
+
+        setTimeout(() => {
+            adjustScrollOffset(); 
+            const centerScroll = (ROW_COUNT * rowHeight) / 2 - 100;
+            gridScrollArea.scrollTop = centerScroll;
+            pianoKeys.scrollTop = centerScroll;
+        }, 100);
+
+        volumeControl.addEventListener('input', (e) => { volValue.innerText = Math.round(e.target.value * 100) + '%'; });
+        bpmControl.addEventListener('input', (e) => { bpm = parseInt(e.target.value); bpmValue.innerText = bpm; });
+        
+        genreSelect.addEventListener('change', (e) => {
+            currentGenre = e.target.value;
+            const settings = genreSettings[currentGenre];
+            if(settings) {
+                bpm = settings.bpm;
+                bpmControl.value = bpm;
+                bpmValue.innerText = bpm;
+                updateTheme(currentGenre);
+            }
+        });
+
+        drumBtn.addEventListener('click', () => {
+            isDrumsEnabled = !isDrumsEnabled;
+            if(isDrumsEnabled) {
+                drumBtn.classList.add('active');
+                drumBtn.innerText = "🥁 DRUMS: ON";
+            } else {
+                drumBtn.classList.remove('active');
+                drumBtn.innerText = "🥁 DRUMS: OFF";
+            }
+        });
+    }
+
+    function updateTheme(genre) {
+        const settings = genreSettings[genre];
+        if(!settings) return;
+        document.documentElement.style.setProperty('--accent-color', settings.color);
+        document.documentElement.style.setProperty('--accent-glow', settings.color + '80'); 
+        const isBright = ['edm', 'hiphop', 'house'].includes(genre);
+        const btnTextColor = isBright ? '#000' : '#fff';
+        generateBtn.style.color = btnTextColor;
+    }
+
+    function renderGrid() {
+        document.querySelectorAll('.note-cell').forEach(el => {
+            el.className = el.className.replace(/note-head|note-long-start|note-long-mid|note-long-end/g, '').trim();
+        });
+
+        for(const key in activeNotes) {
+            const [stepStr, midiStr] = key.split('_');
+            const step = parseInt(stepStr);
+            const midi = parseInt(midiStr);
+            const note = activeNotes[key];
+            const duration = note.duration || 1;
+
+            if(duration === 1) {
+                const el = document.getElementById(`cell-${step}-${midi}`);
+                if(el) el.classList.add('note-head');
+            } else {
+                const headEl = document.getElementById(`cell-${step}-${midi}`);
+                if(headEl) {
+                    headEl.classList.add('note-head');
+                    headEl.classList.add('note-long-start');
+                }
+                for(let i=1; i < duration; i++) {
+                    const nextEl = document.getElementById(`cell-${step+i}-${midi}`);
+                    if(nextEl) {
+                        if(i === duration - 1) {
+                             nextEl.classList.add('note-long-end');
+                        } else {
+                             nextEl.classList.add('note-long-mid');
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --- Interaction Logic (Drag to Edit) ---
+
+    function handleMouseDown(e, step, midi) {
+        const el = document.getElementById(`cell-${step}-${midi}`);
+        let existingNoteKey = null;
+        for(const key in activeNotes) {
+            const [sStr, mStr] = key.split('_');
+            const s = parseInt(sStr);
+            const m = parseInt(mStr);
+            if(m === midi) {
+                const dur = activeNotes[key].duration || 1;
+                if(step >= s && step < s + dur) {
+                    existingNoteKey = key;
+                    break;
+                }
+            }
+        }
+
+        if(existingNoteKey) {
+            delete activeNotes[existingNoteKey];
+            isDrawing = false;
+        } else {
+            isDrawing = true;
+            drawStartStep = step;
+            drawMidi = midi;
+            const key = `${step}_${midi}`;
+            activeNotes[key] = { velocity: 100, duration: 1 };
+            if (!isPlaying) playPreviewNote(midi);
+        }
+        renderGrid();
+    }
+
+    function handleMouseEnter(e, step, midi) {
+        if(!isDrawing) return;
+        if(midi !== drawMidi) return; 
+
+        if(step >= drawStartStep) {
+            const newDuration = step - drawStartStep + 1;
+            const key = `${drawStartStep}_${drawMidi}`;
+            if(activeNotes[key]) {
+                activeNotes[key].duration = newDuration;
+                renderGrid();
+            }
+        }
+    }
+
+    function handleMouseUp() {
+        if(isDrawing) {
+            isDrawing = false;
+            drawStartStep = null;
+            drawMidi = null;
+        }
+    }
+
+    function clearGrid() {
+        activeNotes = {};
+        renderGrid();
+    }
+
+    // --- GENERATOR HUB ---
+    function generatePattern() {
+        clearGrid();
+        
+        const rootKeyStr = document.getElementById('keySelect').value;
+        const scaleName = document.getElementById('scaleSelect').value;
+        const complexity = document.getElementById('complexitySelect').value;
+        
+        const rootMidi = getMidiNumber(rootKeyStr, 1); 
+        const scaleIntervals = getScaleIntervals(scaleName);
+        
+        let motif;
+        const genre = genreSelect.value;
+        
+        switch(genre) {
+            case 'techno': motif = generateTechnoMotif(rootMidi, scaleIntervals, complexity); break;
+            case 'house': motif = generateHouseMotif(rootMidi, scaleIntervals, complexity); break;
+            case 'psytrance': motif = generatePsytranceMotif(rootMidi, scaleIntervals); break;
+            case 'trance_classic': motif = generateClassicTranceMotif(rootMidi, scaleIntervals); break;
+            case 'edm': motif = generateEDMMotif(rootMidi, scaleIntervals, complexity); break;
+            case 'dnb': motif = generateDnBMotif(rootMidi, scaleIntervals, complexity); break;
+            case 'dubstep': motif = generateDubstepMotif(rootMidi, scaleIntervals, complexity); break;
+            case 'hiphop': motif = generateHipHopMotif(rootMidi, scaleIntervals, complexity); break;
+            case 'futurebass': motif = generateFutureBassMotif(rootMidi, scaleIntervals, complexity); break;
+            default: motif = generateTechnoMotif(rootMidi, scaleIntervals, complexity);
+        }
+        
+        const motifVar = varyMotif(motif, scaleIntervals, 0.3);
+        
+        applyMotifToGrid(motif, 0);
+        applyMotifToGrid(motif, 16);
+        applyMotifToGrid(motifVar, 32);
+        
+        if(genre === 'psytrance' || genre === 'trance_classic') {
+             applyMotifToGrid(motif, 48); 
+        } else {
+             const fill = varyMotif(motif, scaleIntervals, 0.6); 
+             applyMotifToGrid(fill, 48);
+        }
+        
+        renderGrid();
+    }
+
+    // --- GENRE ALGORITHMS (UPDATED FOR DURATION) ---
+
+    // 1. Techno: Mostly short
+    function generateTechnoMotif(root, intervals, complexity) {
+        let pattern = [];
+        const density = complexity === 'simple' ? 0.3 : 0.6;
+        for (let i = 0; i < 16; i++) {
+            let hit = false;
+            let note = root;
+            if (i % 4 === 0) hit = Math.random() > 0.7; 
+            else if (i % 4 === 2) hit = Math.random() < (density + 0.2); 
+            else hit = Math.random() < (density - 0.1); 
+            if(hit) pattern.push({stepOffset: i, midi: root, duration: 1}); 
+        }
+        return pattern;
+    }
+
+    // 2. House: Short funky stabs
+    function generateHouseMotif(root, intervals, complexity) {
+        let pattern = [];
+        const density = complexity === 'simple' ? 0.4 : 0.6;
+        for(let i=0; i<16; i++) {
+            let hit = false;
+            let note = root;
+            if(i % 4 === 2) hit = Math.random() < 0.8; 
+            else if(i % 4 === 0) hit = Math.random() < 0.2; 
+            else hit = Math.random() < (density * 0.5); 
+
+            if(hit) {
+                if(Math.random() > 0.7) note += intervals[1];
+                pattern.push({stepOffset: i, midi: note, duration: 1});
+            }
+        }
+        return pattern;
+    }
+
+    // 3. Psytrance: Very short
+    function generatePsytranceMotif(root, intervals) {
+        let pattern = [];
+        for(let i=0; i<16; i++) {
+            if(i % 4 !== 0) { 
+                pattern.push({stepOffset: i, midi: root, duration: 1});
+            }
+        }
+        return pattern;
+    }
+
+    // 4. Classic Trance: 
+    function generateClassicTranceMotif(root, intervals) {
+        let pattern = [];
+        for(let i=0; i<16; i++) {
+            if(i % 4 === 2) {
+                pattern.push({stepOffset: i, midi: root, duration: 1});
+                if(Math.random() > 0.5) pattern.push({stepOffset: i+1, midi: root, duration: 1});
+            }
+        }
+        return pattern;
+    }
+
+    // 5. EDM: 
+    function generateEDMMotif(root, intervals, complexity) {
+        let pattern = [];
+        if(Math.random() > 0.5) {
+            pattern.push({stepOffset: 0, midi: root, duration: 1});
+            pattern.push({stepOffset: 4, midi: root, duration: 1});
+            pattern.push({stepOffset: 8, midi: root, duration: 1});
+            pattern.push({stepOffset: 12, midi: root, duration: 1});
+        } else {
+            pattern.push({stepOffset: 2, midi: root, duration: 1});
+            pattern.push({stepOffset: 6, midi: root, duration: 1});
+            pattern.push({stepOffset: 10, midi: root, duration: 1});
+            pattern.push({stepOffset: 14, midi: root, duration: 1});
+        }
+        return pattern;
+    }
+
+    // 6. DnB: LONG REESE BASS
+    function generateDnBMotif(root, intervals, complexity) {
+        let pattern = [];
+        pattern.push({stepOffset: 0, midi: root, duration: 6});
+        
+        if(Math.random() > 0.5) pattern.push({stepOffset: 7, midi: root + 12, duration: 2}); 
+        if(Math.random() > 0.5) pattern.push({stepOffset: 10, midi: root, duration: 2});
+        else pattern.push({stepOffset: 12, midi: root, duration: 4}); 
+        return pattern;
+    }
+
+    // 7. Dubstep: WOBBLES
+    function generateDubstepMotif(root, intervals, complexity) {
+        let pattern = [];
+        pattern.push({stepOffset: 0, midi: root, duration: 8}); 
+        
+        if(Math.random() > 0.5) {
+             pattern.push({stepOffset: 8, midi: root, duration: 4});
+             pattern.push({stepOffset: 12, midi: root, duration: 4});
+        } else {
+             pattern.push({stepOffset: 8, midi: root, duration: 2});
+             pattern.push({stepOffset: 10, midi: root, duration: 2});
+             pattern.push({stepOffset: 12, midi: root, duration: 1});
+             pattern.push({stepOffset: 13, midi: root+12, duration: 1});
+             pattern.push({stepOffset: 14, midi: root, duration: 2});
+        }
+        return pattern;
+    }
+
+    // 8. HipHop: 808 Sustain
+    function generateHipHopMotif(root, intervals, complexity) {
+        let pattern = [];
+        pattern.push({stepOffset: 0, midi: root, duration: 6});
+        
+        if(Math.random() > 0.3) {
+            let sync = [10, 11, 14][Math.floor(Math.random()*3)];
+            pattern.push({stepOffset: sync, midi: root, duration: 2});
+        }
+        return pattern;
+    }
+
+    // 9. Future Bass: Chords 
+    function generateFutureBassMotif(root, intervals, complexity) {
+        let pattern = [];
+        pattern.push({stepOffset: 0, midi: root, duration: 3});
+        pattern.push({stepOffset: 3, midi: root, duration: 3});
+        pattern.push({stepOffset: 6, midi: root, duration: 3});
+        
+        if(Math.random() > 0.5) pattern.push({stepOffset: 12, midi: root, duration: 4});
+        return pattern;
+    }
+
+    // --- Utilities ---
+    function varyMotif(originalMotif, intervals, amount) {
+        return originalMotif.map(n => {
+            if (Math.random() < amount) {
+                const interval = intervals[Math.floor(Math.random() * intervals.length)];
+                let newMidi = n.midi + (Math.random() > 0.5 ? interval : -interval);
+                if(newMidi < MIN_MIDI) newMidi = MIN_MIDI;
+                if(newMidi > MAX_MIDI) newMidi = MAX_MIDI;
+                return { stepOffset: n.stepOffset, midi: newMidi, duration: n.duration || 1 }; 
+            }
+            return n; 
+        }).filter(n => n.midi >= MIN_MIDI && n.midi <= MAX_MIDI);
+    }
+
+    function applyMotifToGrid(motif, startStep) {
+        motif.forEach(note => {
+            const actualStep = startStep + note.stepOffset;
+            if (actualStep >= TOTAL_STEPS) return;
+            
+            let dur = note.duration || 1;
+            if (actualStep + dur > TOTAL_STEPS) dur = TOTAL_STEPS - actualStep;
+
+            const key = `${actualStep}_${note.midi}`;
+            activeNotes[key] = { velocity: 100 + Math.floor(Math.random() * 27), duration: dur }; 
+        });
+    }
+
+    function getMidiNumber(noteName, octave) {
+        const index = NOTE_NAMES.indexOf(noteName);
+        return (index + (octave + 1) * 12);
+    }
+
+    function getScaleIntervals(name) {
+        const map = {
+            'minor': [0, 2, 3, 5, 7, 8, 10],
+            'phrygian': [0, 1, 3, 5, 7, 8, 10],
+            'harmonic': [0, 2, 3, 5, 7, 8, 11],
+            'dorian': [0, 2, 3, 5, 7, 9, 10],
+            'major': [0, 2, 4, 5, 7, 9, 11]
+        };
+        return map[name] || map['minor'];
+    }
+
+    // --- Audio Engine (Drum Synthesis) ---
+    
+    // Create noise buffer for snare/hats
+    let noiseBuffer = null;
+    function initNoiseBuffer() {
+        if(!audioCtx) return;
+        const bufferSize = audioCtx.sampleRate * 2; // 2 seconds
+        noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+    }
+
+    function playDrumStep(step, time) {
+        if(!isDrumsEnabled) return;
+        const pattern = DRUM_PATTERNS[currentGenre];
+        if(!pattern) return;
+        
+        // Loop position inside the 16 step pattern
+        const localStep = step % 16;
+        
+        if(pattern.k[localStep]) playKick(time);
+        if(pattern.s[localStep]) playSnare(time);
+        if(pattern.h[localStep]) playHiHat(time, false);
+        if(pattern.o[localStep]) playHiHat(time, true);
+    }
+
+    function playKick(time) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(150, time);
+        osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5);
+        gain.gain.setValueAtTime(0.8, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(time);
+        osc.stop(time + 0.5);
+    }
+
+    function playSnare(time) {
+        // Noise
+        const node = audioCtx.createBufferSource();
+        node.buffer = noiseBuffer;
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 1000;
+        gain.gain.setValueAtTime(0.4, time); // Volume factor
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+        node.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        node.start(time);
+        node.stop(time + 0.2);
+        
+        // Body (Osc)
+        const osc = audioCtx.createOscillator();
+        const oscGain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(250, time);
+        oscGain.gain.setValueAtTime(0.3, time);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+        osc.connect(oscGain);
+        oscGain.connect(audioCtx.destination);
+        osc.start(time);
+        osc.stop(time + 0.1);
+    }
+
+    function playHiHat(time, isOpen) {
+        const node = audioCtx.createBufferSource();
+        node.buffer = noiseBuffer;
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 7000;
+        
+        const decay = isOpen ? 0.4 : 0.05;
+        const vol = isOpen ? 0.3 : 0.2;
+
+        gain.gain.setValueAtTime(vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.01, time + decay);
+        
+        node.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        node.start(time);
+        node.stop(time + decay);
+    }
+
+    // --- Audio Engine (Synth) ---
+    function playPreviewNote(midi) {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            initNoiseBuffer();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        playSound(audioCtx.currentTime, midi, 100, 0.2); 
+    }
+
+    function playSound(time, midi, velocity, durationSec) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        const freq = 440 * Math.pow(2, (midi - 69) / 12);
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+
+        filter.type = 'lowpass';
+        filter.Q.value = 5;
+        
+        let decay = durationSec * 0.8; 
+        if(currentGenre === 'psytrance') decay = 0.1;
+
+        filter.frequency.setValueAtTime(freq * 1.5, time);
+        filter.frequency.exponentialRampToValueAtTime(freq, time + decay); 
+
+        const vol = parseFloat(volumeControl.value) * (velocity / 127);
+        gain.gain.setValueAtTime(0.001, time);
+        gain.gain.linearRampToValueAtTime(vol, time + 0.01);
+        
+        // Sustain
+        gain.gain.setValueAtTime(vol, time + durationSec - 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + durationSec);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(time);
+        osc.stop(time + durationSec + 0.1);
+    }
+
+    // --- Scheduler & Playback ---
+    function scheduler() {
+        while (nextNoteTime < audioCtx.currentTime + 0.1) {
+            scheduleStep(currentStep, nextNoteTime);
+            advanceStep();
+        }
+        if (isPlaying) timerID = setTimeout(scheduler, 25);
+    }
+
+    function scheduleStep(step, time) {
+        const secondsPerBeat = 60.0 / bpm;
+        const secondsPer16th = secondsPerBeat / 4;
+
+        // Drums
+        playDrumStep(step, time);
+
+        // Visuals
+        requestAnimationFrame(() => {
+            const prevStep = step === 0 ? TOTAL_STEPS - 1 : step - 1;
+            document.querySelectorAll(`[id^='cell-${prevStep}-']`).forEach(c => c.style.borderRightColor = '');
+            document.querySelectorAll(`[id^='cell-${step}-']`).forEach(c => {
+                c.style.borderRightColor = '#fff'; 
+                if (c.classList.contains('note-head') || c.classList.contains('note-long-mid') || c.classList.contains('note-long-end')) {
+                    c.classList.add('playing-note');
+                    setTimeout(() => c.classList.remove('playing-note'), 150);
+                }
+            });
+            setTimeout(() => {
+                document.querySelectorAll(`[id^='cell-${step}-']`).forEach(c => c.style.borderRightColor = '');
+            }, 150);
+            
+            const cellWidth = 30;
+            const containerWidth = gridScrollArea.clientWidth;
+            const currentPos = step * cellWidth;
+            if (currentPos > gridScrollArea.scrollLeft + containerWidth - 100) {
+                gridScrollArea.scrollLeft = currentPos - 100;
+            } else if (step === 0) {
+                gridScrollArea.scrollLeft = 0;
+            }
+        });
+
+        // Bass Synth
+        for(const key in activeNotes) {
+            const [sStr, mStr] = key.split('_');
+            const noteStartStep = parseInt(sStr);
+            const midi = parseInt(mStr);
+            
+            if (noteStartStep === step) {
+                const note = activeNotes[key];
+                const durSteps = note.duration || 1;
+                const durSec = durSteps * secondsPer16th;
+                playSound(time, midi, note.velocity, durSec); 
+            }
+        }
+    }
+
+    function advanceStep() {
+        const secondsPerBeat = 60.0 / bpm;
+        nextNoteTime += 0.25 * secondsPerBeat; 
+        currentStep++;
+        if (currentStep === TOTAL_STEPS) currentStep = 0;
+    }
+
+    // --- Handlers ---
+    document.getElementById('playBtn').addEventListener('click', () => {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            initNoiseBuffer();
+        }
+        if (isPlaying) {
+            isPlaying = false;
+            clearTimeout(timerID);
+            document.getElementById('playText').innerText = "▶ PLAY";
+        } else {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            currentStep = 0;
+            nextNoteTime = audioCtx.currentTime + 0.1;
+            isPlaying = true;
+            document.getElementById('playText').innerText = "■ STOP";
+            scheduler();
+        }
+    });
+
+    generateBtn.addEventListener('click', generatePattern);
+
+    document.getElementById('midiBtn').addEventListener('click', () => {
+        if (Object.keys(activeNotes).length === 0) return alert("No pattern to export!");
+        let events = [];
+        const ticksPer16th = 24; 
+        
+        for(const key in activeNotes) {
+            const [sStr, mStr] = key.split('_');
+            const step = parseInt(sStr);
+            const midi = parseInt(mStr);
+            const note = activeNotes[key];
+            const dur = note.duration || 1;
+
+            events.push({ type: 'on', midi: midi, velocity: note.velocity, tick: step * ticksPer16th });
+            events.push({ type: 'off', midi: midi, velocity: 0, tick: (step + dur) * ticksPer16th - 2 }); 
+        }
+        
+        events.sort((a, b) => a.tick - b.tick);
+        
+        let trackEvents = [];
+        let lastTick = 0;
+        events.forEach(e => {
+            let delta = e.tick - lastTick;
+            if(delta < 0) delta = 0;
+            writeVarLen(trackEvents, delta);
+            if (e.type === 'on') trackEvents.push(0x90, e.midi, e.velocity);
+            else trackEvents.push(0x80, e.midi, 0);
+            lastTick = e.tick;
+        });
+        writeVarLen(trackEvents, 0);
+        trackEvents.push(0xFF, 0x2F, 0x00);
+        
+        const header = [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96];
+        const trkHead = [0x4D, 0x54, 0x72, 0x6B, (trackEvents.length >> 24) & 0xFF, (trackEvents.length >> 16) & 0xFF, (trackEvents.length >> 8) & 0xFF, trackEvents.length & 0xFF];
+        const blob = new Blob([new Uint8Array([...header, ...trkHead, ...trackEvents])], { type: 'audio/midi' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `bass_${currentGenre}_pattern.mid`;
+        a.click();
+    });
+
+    function writeVarLen(arr, value) {
+        let buffer = value & 0x7F;
+        while ((value >>= 7)) { buffer <<= 8; buffer |= ((value & 0x7F) | 0x80); }
+        while (true) { arr.push(buffer & 0xFF); if (buffer & 0x80) buffer >>= 8; else break; }
+    }
+
+    initUI();
+    window.addEventListener('load', generatePattern);
+
+</script>
+</body>
+</html>
