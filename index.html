@@ -37,16 +37,22 @@
         .piano-grid { position: relative; }
         .bar-separator { border-right: 2px solid #666; }
 
-        /* Note Styling */
+        /* Grid Background Colors (4 steps alternating) */
         .note-cell {
             transition: background-color 0.05s ease; 
             position: relative;
         }
-        .note-cell:hover { background-color: rgba(255, 255, 255, 0.1); }
+        
+        .note-cell.key-white.beat-even { background-color: transparent; }
+        .note-cell.key-white.beat-odd { background-color: rgba(255, 255, 255, 0.03); }
+        .note-cell.key-black.beat-even { background-color: rgba(0, 0, 0, 0.2); }
+        .note-cell.key-black.beat-odd { background-color: rgba(0, 0, 0, 0.35); }
+
+        .note-cell:hover { background-color: rgba(255, 255, 255, 0.1) !important; }
         
         /* Note Heads & Tails */
         .note-cell.note-head {
-            background-color: var(--accent-color);
+            background-color: var(--accent-color) !important;
             border: 1px solid rgba(255,255,255,0.5);
             box-shadow: 0 0 8px var(--accent-glow);
             z-index: 10;
@@ -61,7 +67,7 @@
             margin-right: -1px; 
         }
         .note-cell.note-long-mid {
-            background-color: var(--accent-color);
+            background-color: var(--accent-color) !important;
             opacity: 0.8;
             border-top: 1px solid rgba(255,255,255,0.3);
             border-bottom: 1px solid rgba(255,255,255,0.3);
@@ -73,7 +79,7 @@
             margin-right: -1px;
         }
         .note-cell.note-long-end {
-            background-color: var(--accent-color);
+            background-color: var(--accent-color) !important;
             opacity: 0.8;
             border: 1px solid rgba(255,255,255,0.3);
             border-left: none;
@@ -390,12 +396,18 @@
         for (let row = 0; row < ROW_COUNT; row++) {
             const midiNote = MAX_MIDI - row;
             const isBlackRow = NOTE_NAMES[midiNote % 12].includes('#');
+            const keyClass = isBlackRow ? 'key-black' : 'key-white';
+
             for (let step = 0; step < TOTAL_STEPS; step++) {
                 const cell = document.createElement('div');
                 cell.id = `cell-${step}-${midiNote}`;
-                cell.className = `note-cell border-b border-neutral-800 border-r border-neutral-800/50`;
+                
+                // 4ステップごとに背景を変えるためのクラス (0~3: 偶数拍, 4~7: 奇数拍, 8~11: 偶数拍...)
+                const beatClass = Math.floor(step / 4) % 2 === 1 ? 'beat-odd' : 'beat-even';
+
+                cell.className = `note-cell ${keyClass} ${beatClass} border-b border-neutral-800 border-r border-neutral-800/50`;
+                
                 if ((step + 1) % 16 === 0) cell.classList.add('bar-separator');
-                if (isBlackRow) cell.style.backgroundColor = 'rgba(0,0,0,0.2)';
                 
                 cell.addEventListener('mousedown', (e) => handleMouseDown(e, step, midiNote));
                 cell.addEventListener('mouseenter', (e) => handleMouseEnter(e, step, midiNote));
